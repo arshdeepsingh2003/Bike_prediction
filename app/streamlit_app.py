@@ -4,6 +4,7 @@ import numpy as np
 import pickle
 import datetime
 import plotly.express as px
+import os
 
 # ------------------------------------------------
 # PAGE CONFIG
@@ -15,19 +16,32 @@ st.set_page_config(
 )
 
 # ------------------------------------------------
-# LOAD MODEL
+# LOAD MODEL (CACHED FOR FAST DEPLOYMENT)
 # ------------------------------------------------
-model = pickle.load(open("models/xgboost_model.pkl", "rb"))
-scaler = pickle.load(open("models/scaler.pkl", "rb"))
+@st.cache_resource
+def load_model():
+
+    model_path = os.path.join("models", "xgboost_model.pkl")
+    scaler_path = os.path.join("models", "scaler.pkl")
+
+    with open(model_path, "rb") as f:
+        model = pickle.load(f)
+
+    with open(scaler_path, "rb") as f:
+        scaler = pickle.load(f)
+
+    return model, scaler
+
+
+model, scaler = load_model()
 
 # ------------------------------------------------
 # TITLE
 # ------------------------------------------------
 st.title("🚴 Bike Rental Demand Prediction")
 
-
 # ------------------------------------------------
-# INPUT PANEL (NO SIDEBAR)
+# INPUT PANEL
 # ------------------------------------------------
 st.subheader("⚙️ Input Parameters")
 
@@ -135,6 +149,7 @@ df_input = pd.DataFrame([base_data], columns=columns)
 # SEASON ENCODING
 # ------------------------------------------------
 season_cols = ['Spring', 'Summer', 'Winter']
+
 season_data = np.zeros((1, len(season_cols)))
 
 df_season = pd.DataFrame(season_data, columns=season_cols)
@@ -146,6 +161,7 @@ if season in season_cols:
 # WEEKDAY ENCODING
 # ------------------------------------------------
 weekday_cols = ['Monday', 'Saturday', 'Sunday', 'Thursday', 'Tuesday', 'Wednesday']
+
 weekday_data = np.zeros((1, len(weekday_cols)))
 
 df_weekday = pd.DataFrame(weekday_data, columns=weekday_cols)
@@ -168,6 +184,7 @@ predict_button = st.button("Predict Bike Demand 🚲")
 if predict_button:
 
     scaled_data = scaler.transform(final_df)
+
     prediction = model.predict(scaled_data)
 
     demand = int(prediction[0])
@@ -191,6 +208,7 @@ if predict_button:
     # VISUALIZATION
     # ------------------------------------------------
     hours = list(range(24))
+
     simulated = [max(0, demand + np.random.randint(-150, 150)) for _ in hours]
 
     df_chart = pd.DataFrame({
